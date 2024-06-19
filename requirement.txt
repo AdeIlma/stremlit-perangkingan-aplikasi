@@ -2,7 +2,7 @@ numpy==1.26.4
 pandas==2.2.2
 streamlit
 scikit-learn
-pip==24.0
+pip
 nltk==3.8.1
 seaborn==0.13.2
 deep-translator==1.11.4
