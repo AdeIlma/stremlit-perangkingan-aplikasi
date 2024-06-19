@@ -21,7 +21,10 @@ nltk.download('stopwords')
 
 # 1. Merubah jenis huruf menjadi huruf kecil
 def lowercase(review_text):
-    return review_text.lower()
+    if isinstance(review_text, str):
+        return review_text.lower()
+    else:
+        return ""
 
 # 2. Menghapus emoji menggunakan regex dan nilai unicode dari emoji
 def remove_emoji(review_text):
