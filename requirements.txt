@@ -1,0 +1,12 @@
+numpy==1.26.4
+pandas==2.2.2
+streamlit
+scikit-learn
+pip
+nltk==3.8.1
+seaborn==0.13.2
+deep-translator==1.11.4
+matplotlib==3.9.0
+Sastrawi==1.0.1
+stop-words==2018.7.23
+tqdm==4.66.4
