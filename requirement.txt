@@ -1,7 +1,7 @@
 numpy==1.26.4
 pandas==2.2.2
 streamlit
-scikit-learn==1.5.0
+scikit-learn
 pip==24.0
 nltk==3.8.1
 seaborn==0.13.2
