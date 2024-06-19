@@ -17,8 +17,6 @@ import seaborn as sns
 nltk.download('punkt')
 nltk.download('stopwords')
 
-
-
 # 1. Merubah jenis huruf menjadi huruf kecil
 def lowercase(review_text):
     if isinstance(review_text, str):
@@ -113,7 +111,7 @@ def clean_review_pipeline(review_text):
     review_text = remove_digits(review_text)
     review_text = remove_extra_whitespace(review_text)
     
-        # Check if the review text is empty after preprocessing
+    # Check if the review text is empty after preprocessing
     if review_text.strip() == '':
         return None  # Return None for empty reviews
     return review_text
@@ -149,7 +147,6 @@ def calculate_sentiment_weight(df):
     sentimen_positif = df[df['Sentiment'] == 'Positif'].groupby('appName')['Sentiment'].count()
     sentimen_negatif = df[df['Sentiment'] == 'Negatif'].groupby('appName')['Sentiment'].count()
     sentimen_netral = df[df['Sentiment'] == 'Netral'].groupby('appName')['Sentiment'].count()
-
 
     # Menggabungkan semua sentimen dalam satu DataFrame dan mengisi NaN dengan 0
     df_sentimen = pd.DataFrame({
@@ -215,7 +212,7 @@ def plot_sentiment_diagram_garis(df):
 
 # Main function
 def main():
-    st.title("Perangkingan Aplikasi Menggunakan  ulasan Google Play Store")
+    st.title("Perangkingan Aplikasi Menggunakan ulasan Google Play Store")
 
     num_apps = st.number_input("Masukkan jumlah aplikasi yang ingin diambil ulasannya", min_value=1, value=1)
 
@@ -273,13 +270,13 @@ def main():
 
         # Menghapus data duplikat dan menangani missing value sebelum preprocessing
         df.drop_duplicates(inplace=True)  # Menghapus data duplikat
-        # Drop rows with empty reviews after preprocessing
-        df['clean_review'] = df['content'].apply(clean_review_pipeline)
-        df.dropna(subset=['clean_review'], inplace=True)
-
-
+        df.dropna(subset=['content'], inplace=True)  # Menghapus baris dengan nilai kosong di kolom 'content'
+        
         # Membersihkan teks dan membuat kolom 'clean_review'
         df['clean_review'] = df['content'].apply(clean_review_pipeline)
+        
+        # Drop rows with empty reviews after preprocessing
+        df.dropna(subset=['clean_review'], inplace=True)
 
         # Lakukan tokenisasi pada data frame
         df['tokenize'] = df['clean_review'].apply(lambda x: tokenize(x))  
@@ -294,6 +291,8 @@ def main():
         # Translation
         if translate_reviews and dest_language:
             df['translate_reviews'] = df['stemming_data'].apply(translate_text, args=(dest_language,))
+        else:
+            df['translate_reviews'] = df['stemming_data']
 
         # Perform Vader sentiment analysis
         df['Compound_Score'] = df['translate_reviews'].apply(vader_sentiment_analysis)
@@ -310,6 +309,12 @@ def main():
         plot_sentiment_diagram_batang(df)
         plot_sentiment_diagram_garis(df)
 
+        # Tambahkan kode untuk menghitung dan menampilkan jumlah ulasan berdasarkan sentimen per aplikasi
+        sentiment_counts_per_app = df.groupby(['appName', 'Sentiment']).size().unstack(fill_value=0)
+        st.write("Jumlah Ulasan berdasarkan Sentimen per Aplikasi:")
+        st.write(sentiment_counts_per_app)
+
 if __name__ == "__main__":
     main()
+
 
