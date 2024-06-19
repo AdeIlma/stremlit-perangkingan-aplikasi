@@ -11,3 +11,4 @@ Sastrawi==1.0.1
 stop-words==2018.7.23
 tqdm==4.66.4
 vaderSentiment==3.3.2
+google-play-scraper==1.2.7
