@@ -1,3 +1,4 @@
+
 import re
 import nltk
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
@@ -12,10 +13,24 @@ from tqdm import tqdm
 import time
 import matplotlib.pyplot as plt
 import seaborn as sns
+from datetime import datetime, timedelta
+import json
 
 # Download data yang diperlukan untuk tokenisasi dan stopwords (jalankan hanya sekali)
 nltk.download('punkt')
 nltk.download('stopwords')
+
+# Load kamus normalisasi dari file 'slang_words.txt'
+with open('slang_words.txt', 'r', encoding='utf-8-sig') as file:
+    data = file.read()
+    norm = json.loads(data)
+
+def normalize_text(text, normalization_dict):
+    if text is None:
+        return ""
+    words = str(text).split()
+    normalized_words = [normalization_dict.get(word.lower(), word) for word in words]
+    return ' '.join(normalized_words)
 
 # 1. Merubah jenis huruf menjadi huruf kecil
 def lowercase(review_text):
@@ -184,7 +199,7 @@ def calculate_sentiment_weight(df):
     return df_result
 
 # Function to plot sentiment for each app
-def plot_sentiment_diagram_batang(df):
+def diagram_batang1(df):
     plt.figure(figsize=(10, 6))
     sns.countplot(data=df, x='appName', hue='Sentiment')
     plt.title('Sentimen Tiap Aplikasi', fontweight='bold')  # Make the title bold
@@ -194,17 +209,12 @@ def plot_sentiment_diagram_batang(df):
     plt.legend(title='Sentiment')  # Menambahkan judul pada legenda
     st.pyplot(plt)
 
-def plot_sentiment_diagram_garis(df):
-    # Agregasi data untuk mendapatkan jumlah ulasan per aplikasi berdasarkan sentimen
-    df_aggregated = df.groupby(['appName', 'Sentiment']).size().reset_index(name='count')
-
-    # Pastikan data diurutkan berdasarkan aplikasi dan sentimen
-    df_aggregated = df_aggregated.sort_values(by=['appName', 'Sentiment'])
+def diagram_batang2(df):
     plt.figure(figsize=(10, 6))
-    palette = {'Positif': 'green', 'Netral': 'blue', 'Negatif': 'red'}  # Warna kustom
-    sns.lineplot(data=df_aggregated, x='appName', y='count', hue='Sentiment', palette=palette, marker='o')
+    palette = sns.color_palette("bright") 
+    sns.countplot(data=df, x='Sentiment', hue='appName', palette=palette)
     plt.title('Sentimen Tiap Aplikasi', fontweight='bold')  # Membuat judul tebal
-    plt.xlabel('Aplikasi')
+    plt.xlabel('Sentimen')
     plt.ylabel('Jumlah Ulasan')
     plt.xticks(rotation=45)
     plt.legend(title='Sentiment')  # Menambahkan judul pada legenda
@@ -212,7 +222,7 @@ def plot_sentiment_diagram_garis(df):
 
 # Main function
 def main():
-    st.title("Perangkingan Aplikasi Menggunakan ulasan Google Play Store")
+    st.title("Scraping Ulasan Aplikasi di Google Play Store")
 
     num_apps = st.number_input("Masukkan jumlah aplikasi yang ingin diambil ulasannya", min_value=1, value=1)
 
@@ -225,7 +235,14 @@ def main():
         app_names.append(app_name)
 
     max_reviews = st.number_input("Masukkan jumlah maksimum ulasan yang ingin diambil", min_value=1, value=1000)
-    sleep_milliseconds = st.number_input("Masukkan waktu jeda antara setiap permintaan scraping (dalam milidetik)", min_value=0, value=0)
+    sleep_milliseconds = 3
+
+    # Tambahkan input rentang waktu
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("Tanggal mulai", value=datetime.now() - timedelta(days=30))
+    with col2:
+        end_date = st.date_input("Tanggal akhir", value=datetime.now())
 
     translate_reviews = st.checkbox("Terjemahkan ke bahasa lain?")
     dest_language = None
@@ -235,37 +252,46 @@ def main():
     if st.button("Mulai Pengambilan Ulasan"):
         reviews_data = []
         for app_id, app_name in zip(app_ids, app_names):
-            print(f"Scraping reviews for app: {app_name}")
+            st.write(f"Scraping reviews for app: {app_name}")
             result = []
             continuation_token = None
 
-            with tqdm(total=max_reviews, position=0, leave=True) as pbar:
-                while len(result) < max_reviews:
-                    try:
-                        new_result, continuation_token = reviews(
-                            app_id,
-                            continuation_token=continuation_token,
-                            lang='id',
-                            country='id',
-                            sort=Sort.NEWEST,
-                            filter_score_with=None,
-                            count=min(max_reviews - len(result), 199)  # Adjust count based on remaining reviews needed
-                        )
-                        if not new_result:
-                            break
-                        result.extend(new_result)
-                        pbar.update(len(new_result))
-                    except Exception as e:
-                        print(f"Error occurred: {e}")
-                        time.sleep(5)
-
-            result = [{'content': review['content'], 'appName': app_name} for review in result]
-            reviews_data.extend(result)
+            progress_bar = st.progress(0)
+            for i in range(0, max_reviews, 199):
+                try:
+                    new_result, continuation_token = reviews(
+                        app_id,
+                        continuation_token=continuation_token,
+                        lang='id',
+                        country='id',
+                        sort=Sort.NEWEST,
+                        filter_score_with=None,
+                        count=min(max_reviews - len(result), 199)
+                    )
+                    if not new_result:
+                        break
+                    for review in new_result:
+                        if review and 'content' in review:
+                            review['content'] = normalize_text(review['content'], norm)
+                    # Filter ulasan berdasarkan rentang tanggal dan tambahkan 'appName'
+                    filtered_reviews = [
+                        {'content': review['content'], 'appName': app_name, 'at': review['at']}
+                        for review in new_result
+                        if start_date <= review['at'].date() <= end_date
+                    ]
+                    result.extend(filtered_reviews)
+                    reviews_data.extend(filtered_reviews)
+                    progress_bar.progress(min((i + len(new_result)) / max_reviews, 1.0))
+                    if len(result) >= max_reviews:
+                        break
+                except Exception as e:
+                    st.error(f"Error occurred: {e}")
+                    time.sleep(5)
 
             if sleep_milliseconds:
                 time.sleep(sleep_milliseconds / 1000)
-
-        # Create DataFrame from reviews data
+                
+        # Membuat DataFrame dari reviews_data
         df = pd.DataFrame(reviews_data)
 
         # Menghapus data duplikat dan menangani missing value sebelum preprocessing
@@ -299,22 +325,27 @@ def main():
         # Add Sentiment column to the original DataFrame
         df['Sentiment'] = df['Compound_Score'].apply(lambda score: 'Positif' if score > 0 else ('Netral' if score == 0 else 'Negatif'))
 
-        st.write(df)
-
         # Calculate sentiment weight
         df_result = calculate_sentiment_weight(df)
         st.write(df_result)
 
-        # Plot sentiment for each app
-        plot_sentiment_diagram_batang(df)
-        plot_sentiment_diagram_garis(df)
+        st.write(df)
 
-        # Tambahkan kode untuk menghitung dan menampilkan jumlah ulasan berdasarkan sentimen per aplikasi
-        sentiment_counts_per_app = df.groupby(['appName', 'Sentiment']).size().unstack(fill_value=0)
-        st.write("Jumlah Ulasan berdasarkan Sentimen per Aplikasi:")
-        st.write(sentiment_counts_per_app)
+        # Plot sentiment for each app
+        diagram_batang1(df)
+        diagram_batang2(df)
+
+        # Menghitung total jumlah ulasan per aplikasi setelah pembersihan
+        total_reviews_per_app = df['appName'].value_counts().reset_index()
+        total_reviews_per_app.columns = ['appName', 'Total Reviews']
+
+        # Tampilkan total jumlah ulasan per aplikasi setelah pembersihan
+        st.write(total_reviews_per_app)
+
+        # Display total number of reviews after cleaning
+        total_reviews = len(df)
+        st.write(f"Total jumlah ulasan setelah pembersihan: {total_reviews}")
 
 if __name__ == "__main__":
     main()
-
 
