@@ -10,17 +10,25 @@ Metode SAW digunakan untuk menentukan peringkat aplikasi berdasarkan analisis se
 #### 2. Normalisasi 
 Normalisasi dilakukan menggunakan rumus:
 1. Untuk benefit (semakin tinggi semakin baik):
-   ![image](https://github.com/user-attachments/assets/e3733323-054a-4d59-80c4-fbc7a7cf49a7)
+    ![image](https://github.com/user-attachments/assets/e3733323-054a-4d59-80c4-fbc7a7cf49a7)
 
-2. Untuk cost (semakin rendah semakin baik):
+   
+
+3. Untuk cost (semakin rendah semakin baik):
    ![image](https://github.com/user-attachments/assets/4c07e4dd-7f64-4b3f-84fb-c8c6f7a676de)
 
-3. Untuk netral, digunakan rata-rata:
+
+
+4. Untuk netral, digunakan rata-rata:
    ![image](https://github.com/user-attachments/assets/79326d2c-0ffb-426d-8ccc-55388facebde)
+
+
 
 #### 3. Menghitung Nilai Preferensi
 Setelah normalisasi, setiap alternatif dihitung menggunakan persamaan:
 ![image](https://github.com/user-attachments/assets/156b0e48-257f-47c8-a8ca-a80221af41b6)
+
+
 Di mana:
 1. Vi = nilai preferensi
 2. wj = bobot masing-masing kriteria
